@@ -16,12 +16,12 @@ https://www.haskell.org/documentation/
 ### This is 
 
 - a complementary resource that helps python programmers to learn Haskell as a new language
-- a place for beginners to learn and reinforce Haskell, as well as its functional programming concepts
+- a place for beginners to learn and reinforce Haskell, as well as its semantics and functional programming concepts
 
 ### This is __not__
 
-- an one-stop shop that teaches you *everything* about Haskell
-- an encyclopedia that covers *all* the similarities and differences between Python and Haskell
+- an one-stop-shop that teaches *everything* about Haskell
+- an encyclopedia that covers *all* similarities and differences between Python and Haskell
 
 ## From Python to Haskell
 
@@ -42,9 +42,7 @@ All examples are either code snippet or interactions with python shell or [Haske
 Python shell examples starts with `>>> `, and Haskell GHCi examples starts with `λ> `. Please note that all 
 Python codes are written in [Python 3](https://docs.python.org/3/).
 
-For similarities, examples usually starts with Python, followed by Haskell. 
-For concepts or features that are unique to Haskell, Haskell code will be shown first, 
-and a Python implementation will follow. 
+---------------------------
 
 ### Hello World
 
@@ -61,6 +59,8 @@ Haskell
 λ> print "Hello world"
 "Hello world"
 ```
+
+---------------------------
 
 ### Functions
 
@@ -147,6 +147,7 @@ Haskell
 [2,3,4]
 ```
 
+---------------------------
 
 ### List
 
@@ -327,7 +328,9 @@ Haskell
 [(1,8),(2,9),(3,10)]
 ```
 
-### From Class (Python) to data (Haskell) 
+---------------------------
+
+### Class -> data 
 
 In Python, and most OOP languages, Classes provide a means that bundles two things:
 - data
@@ -356,14 +359,15 @@ class Square:
 ```
 
 Class `Square` bundles a float number, `side`, and a function, `area`, which calculates the area of the square. 
-The attribute `side` could be directly updated. We use word "mutable" to describe the property that the attributes of 
-a class could be changed. Because of mutability, the functions bundled with the class are stateful, which means that 
+Attribute `side` could be directly updated. The functions bundled with the class are stateful, because 
 the outputs of the same function could be different depending on the state of the class. Being stateful is like holding 
 a double-edge sword. On one hand, you can make the a class very flexible and adaptive to changes. On the other 
 hand, however, the behavior of functions becomes non-deterministic with respect to their inputs, making it sometimes 
 unpredictable and difficult to debug. 
 
-Now let's see a way to define a Square and a function that calculates its area in Haskell.
+Now let's see a way to define a Square and a function that calculates any Square's area in Haskell.
+
+`data` is a keyword in Haskell. It defines a type of data structure, similar to `Class` in Python.
 
 ```haskell
 data Square = Square Float -- Defining "Square" as a data structure that holds a Float
@@ -378,40 +382,225 @@ area (Square side) = side ^ 2 -- Implement the area function
 25.0
 ```
 
-What we saw above, is a data structure (`Square`) that holds a float, and a function (`area`) that operates on this specific
-data structure, while not being bundled to the data structure itself. The separation of data and function, is one of the 
+What we saw above, is a type (`Square`) that holds a float, and a function (`area`) that operates on this specific
+type, while not being bundled to the data structure itself. The separation of data and function, is one of the 
 most important characteristics of Haskell. 
-What's good about the separation of data and function? You are right, stateless! Instead of depending on some "internal"
+What's good about the separation of data and function? Stateless! Instead of depending on some "internal"
 state, functions are deterministic and predictable purely from their inputs.
 
+---------------------------
 
-### Interface and Typeclass
+### Interface -> Type class
 
-We know that in Python, a class can implement interface `__eq__(self, other)`, so its objects could be compared with 
-the syntax `x == y`. Example:
+
+Area does not only apply to square, but all types of shapes. Let's start with defining an interface, `area`, in Python.
 
 ```python
-class MyClass:
-    def __init__(self, val):
-        self.val = val
+from abc import ABC, abstractmethod
+
+class Shape(ABC):
+
+    @abstractmethod
+    def area(self):
+        pass
+```
+
+Then we define a couple of shapes that implements `area`.
+
+```python
+import math
+from dataclasses import dataclass
+
+@dataclass
+class Square(Shape):
+    side: float
+
+    def area(self):
+        return self.side ** 2
+
+@dataclass
+class Rectangle(Shape):
+    height: float
+    width: float
+
+    def area(self):
+        return self.height * self.width
+
+@dataclass
+class Circle(Shape):
+    radius: float
+
+    def area(self):
+        return math.pi * self.radius ** 2
+```
+
+```python
+>>> my_shapes = [Square(5), Rectangle(5, 6), Circle(3)]
+>>> [shape.area() for shape in my_shapes]
+[25, 30, 28.274333882308138]
+```
+
+How do to do so in Haskell?
+
+In Haskell, data can define more than one constructor.
+
+```haskell
+data Shape = Square Float | Rectangle Float Float | Circle Float
+```
+
+
+Here is one way to write our area function in Haskell:
+
+```haskell
+area :: Shape -> Float
+area (Square side) = side ^ 2
+area (Rectangle height width) = height * width
+area (Circle radius) = pi * radius ^ 2
+```
+
+```haskell
+λ> map area [Square 5, Rectangle 5 6, Circle 3]
+[25.0,30.0,28.274334]
+```
+
+
+You might already observe a problem here: whenever a new type of "Shape" is created, we will need to add that type to  
+the implementation of "area". In other words, "area" is tightly coupled with "Shape"
+For instance, say we create a new type that represents continents and we want them to support calculation of 
+their areas. If we continue to use the same area function, things become ugly.
+
+First, we need to add more types to shape:
+
+```haskell
+data Shape = Square Float
+    | Rectangle Float Float
+    | Circle Float
+    | Africa
+    | Antarctica
+```
+
+Then, we need to modify area function as well
+
+```haskell
+area :: Shape -> Float
+area (Square side) = side ^ 2
+area (Rectangle height width) = height * width
+area (Circle radius) = pi * radius ^ 2
+area (Africa) = 1.117e7 -- in the unit of square miles
+area (Antarctica) = 5.483e6
+```
+
+In other words, the implementation of `area` is coupled with `Shape`. 
+
+
+Here is where type classes become handy. Type class is similar to the concept of interface in 
+object-oriented programming. Let's try to define our "interface" with a type class.
+
+
+```haskell
+class MyObject a where
+    area :: a -> Float
+```
+
+What we are are seeing, is a type class, `MyObject`, that declares a behavior (or function), `area`, 
+which returns a Float when a type of `MyObject` is given.
+
+Now, we can define Shapes and Continents separately and make them support area calculation at the same time.
+
+##### Define shapes 
+
+```haskell
+data Shape = Square Float | Rectangle Float Float
+instance MyObject Shape where
+    area (Square side) = side ^ 2
+    area (Rectangle height width) = height * width
+
+```
+
+```haskell
+λ> let a = Square 4
+λ> area a
+16.0
+λ> let b = Rectangle 4 5
+λ> area b
+20.0
+```
+
+##### Define continents
+
+```haskell
+data Continent = Africa | Antarctica
+instance MyObject Continent where
+    area Africa = 1.117e7
+    area Antarctica = 5.483e6
+```
+
+```haskell
+λ> area Africa
+1.117e7
+λ> area Antarctica
+5483000.0
+```
+
+The codes of Shape and Continent are completely independent, but we can still apply the same function (`area`) on them. 
+
+This concept is actually nothing new in Python. Remember equality operator `==`? In Python, a class can implement 
+`__eq__` to make itself comparable under `==` operator. Example:
+
+
+```python
+class Rectangle:
+    def __init__(self, height, width):
+        self.height = height
+        self.width = width
 
     def __eq__(self, other):
-        if isinstance(other, MyClass) and self.val == other.val:
-            return True
-        else:
-            return False
+        if isinstance(other, Rectangle):
+            return self.height == other.height and self.width == other.width
 ```
 
 ```python
->>> MyClass(1) == MyClass(1)
+>>> Rectangle(5, 6) == Rectangle(5, 6)
 True
->>> MyClass(1) == MyClass(2)
-False
->>> MyClass(1) == 1
+>>> Rectangle(5, 6) == Rectangle(6, 7)
 False
 ```
 
-Typeclass in Haskell is similar to the concept of interface in object-oriented programming, 
-but in a functional (better) way. A typeclass defines what 
+Unsurprisingly, `==` belongs to type class `Eq` in Haskell.
 
-Here is the definition of 
+This is the definition of `Eq`:
+
+```haskell
+class Eq a where
+    (==) :: a -> a -> Bool
+    (/=) :: a -> a -> Bool
+    x == y = not (x /= y)  
+    x /= y = not (x == y)   
+```
+
+Let's try implement `Eq` for our rectangle.
+
+```haskell
+data Rectangle = Rectangle Float Float
+instance Eq Rectangle where
+    Rectangle a b == Rectangle x y = a == x && b == y
+```
+
+```haskell
+λ> Rectangle 5 6 == Rectangle 5 6
+True
+λ> Rectangle 5 6 == Rectangle 6 7
+False
+λ> Rectangle 5 6 /= Rectangle 6 7
+True
+```
+
+Notice that we only need to implement either `==` or `/=`, and the other operator will be automatically usable. 
+This is achieved by the default implementation of `Eq`, where one is the negation of the other:
+
+```haskell
+    x == y = not (x /= y)
+    x /= y = not (x == y)
+``` 
+
+
