@@ -281,7 +281,7 @@ Haskell
 [4,8,12,16,20]
 ```
 
-##### More complex list comprehension*
+##### More complex list comprehension
 
 Python
 
@@ -544,8 +544,8 @@ instance MyObject Continent where
 
 The codes of Shape and Continent are completely independent, but we can still apply the same function (`area`) on them. 
 
-This concept is actually nothing new in Python. Remember equality operator `==`? In Python, a class can implement 
-`__eq__` to make itself comparable under `==` operator. Example:
+This concept is actually nothing new in Python. Remember [data model](https://docs.python.org/3/reference/datamodel.html) 
+in python? For example, a class can implement  `__eq__` so we can apply `==` operator to it:
 
 
 ```python
@@ -603,4 +603,111 @@ This is achieved by the default implementation of `Eq`, where one is the negatio
     x /= y = not (x == y)
 ``` 
 
+---------------------------
+
+### Higher order functions
+
+Higher order functions are functions that takes functions as inputs or return functions as outputs.
+Let's start with some of the most common higher order functions: map, filter, and reduce.
+
+#### Map
+```python
+>>> list(map(lambda x: x*2, range(1, 5)))
+[2, 4, 6, 8]
+```
+
+```haskell
+λ> map (*2) [1..4]
+[2,4,6,8]
+```
+
+#### Filter
+```python
+>>> list(filter(lambda x: x >= 3, range(1, 5)))
+[3, 4]
+```
+
+```haskell
+λ> filter (>=3) [1..4]
+[3,4]
+```
+
+#### Reduce
+```python
+>>> from functools import reduce
+>>> reduce(lambda x, a: x + a, range(1,5), 100)
+110
+```
+
+
+Reduce is called "fold" in Haskell
+```haskell
+λ> foldl (+) 100 [1..4]
+110
+```
+
+#### Partial functions
+
+In Python, we can create a function that takes a function and return a new function that add things 
+on top of it. For example, we can make a "partial" function that apply arguments partially to another 
+function.
+
+```python
+def add(x, y):
+    return x + y
+
+def multiply(x, y):
+    return x * y
+
+def partial(func, *partial_args):
+    def apply(*remaining_args):
+        return func(*partial_args,  *remaining_args)
+    return apply
+```
+
+Now, we can use a combination of `partial` and another function to construct new functions. 
+
+```python
+>>> increment = partial(add, 1)
+>>> increment(2)
+3
+>>> increment(3)
+4
+>>> double = partial(multiply, 2)
+>>> double(2)
+4
+>>> double(3)
+6
+```
+
+In fact, Python standard library provides `partial` as a utility function in module `functools`.
+
+```python
+from functools import partial
+>>> from functools import partial
+>>> increment = partial(add, 1)
+>>> increment(3)
+4
+>>> double = partial(multiply, 2)
+>>> double(2)
+4
+```
+
+Can we do something similar in Haskell? Yes, and even simpler! 
+
+```haskell
+λ> increment = (+) 1
+λ> increment 3
+4
+λ> increment 4
+5
+λ> double = (*) 2
+λ> double 2
+4
+λ> double 3
+6
+```
+
+In fact, all functions could be partially applied in Haskell by default. In Haskell, we call partially 
+applied functions as "curried functions", named after Haskell Curry.
 
