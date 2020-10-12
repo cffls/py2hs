@@ -7,25 +7,43 @@ This is a reference guide I created when I was learning Haskell.
 
 This project is inspired by [py2rs](https://github.com/rochacbruno/py2rs). 
 
-### Getting started with Haskell
-Official Haskell documentation provides plenty of tutorials and books to start with.
-
-https://www.haskell.org/documentation/
-
-
-### This is 
+*This is:* 
 
 - a complementary resource that helps python programmers to learn Haskell as a new language
-- a place for beginners to learn and reinforce Haskell, as well as its semantics and functional programming concepts
+- a place for beginners to learn and reinforce some of the core concepts in Haskell
 
-### This is __not__
+*This is __not__:*
 
 - an one-stop-shop that teaches *everything* about Haskell
-- an encyclopedia that covers *all* similarities and differences between Python and Haskell
+- an encyclopedia that aims at covering *all* similarities and differences between Python and Haskell
 
-## From Python to Haskell
+## Table of contents
+  * [General](#general)
+     * [Getting started with Haskell](#getting-started-with-haskell)
+  * [Show me the code](#show-me-the-code)
+     * [Hello World](#hello-world)
+     * [Functions](#functions)
+        * [Basic function definition](#basic-function-definition)
+        * [Flow control](#flow-control)
+        * [Explicit typing](#explicit-typing)
+        * [Lambda function](#lambda-function)
+     * [List](#list)
+        * [List creation](#list-creation)
+        * [List concatenation](#list-concatenation)
+        * [Adding element to list](#adding-element-to-list)
+        * [Indexing](#indexing)
+        * [List comprehension](#list-comprehension)
+        * [Zipping](#zipping)
+     * [Class -&gt; data](#class---data)
+     * [Interface -&gt; Type class](#interface---type-class)
+     * [Higher order functions](#higher-order-functions)
+        * [Map](#map)
+        * [Filter](#filter)
+        * [Reduce](#reduce)
+        * [Partial functions](#partial-functions)
 
-##  General
+
+## General
 
 | Definition      | Python      | Haskell  |
 | -----------    | ----------- | -------- |
@@ -35,8 +53,12 @@ https://www.haskell.org/documentation/
 | File extensions | .py, .pyw, .pyc | .hs, .lhs | 
 | Programming guidelines | [Haskell programming guidelines](https://wiki.haskell.org/Programming_guidelines#Let_or_where_expressions) | [PEP8](https://www.python.org/dev/peps/pep-0008/)
 
+### Getting started with Haskell
+Official Haskell documentation provides plenty of tutorials and books to start with.
 
-## Code
+https://www.haskell.org/documentation/
+
+## Show me the code
 
 All examples are either code snippet or interactions with python shell or [Haskell GHCi](https://wiki.haskell.org/GHC/GHCi). 
 Python shell examples starts with `>>> `, and Haskell GHCi examples starts with `λ> `. Please note that all 
@@ -611,10 +633,14 @@ Higher order functions are functions that takes functions as inputs or return fu
 Let's start with some of the most common higher order functions: map, filter, and reduce.
 
 #### Map
+Python
+
 ```python
 >>> list(map(lambda x: x*2, range(1, 5)))
 [2, 4, 6, 8]
 ```
+
+Haskell
 
 ```haskell
 λ> map (*2) [1..4]
@@ -622,23 +648,26 @@ Let's start with some of the most common higher order functions: map, filter, an
 ```
 
 #### Filter
+Python
 ```python
 >>> list(filter(lambda x: x >= 3, range(1, 5)))
 [3, 4]
 ```
 
+
+Haskell
 ```haskell
 λ> filter (>=3) [1..4]
 [3,4]
 ```
 
 #### Reduce
+Python
 ```python
 >>> from functools import reduce
 >>> reduce(lambda x, a: x + a, range(1,5), 100)
 110
 ```
-
 
 Reduce is called "fold" in Haskell
 ```haskell
