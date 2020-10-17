@@ -41,6 +41,7 @@ This project is inspired by [py2rs](https://github.com/rochacbruno/py2rs).
         * [Filter](#filter)
         * [Reduce](#reduce)
         * [Partial functions](#partial-functions)
+        * [Functor](#functor)
 
 
 ## General
@@ -740,3 +741,122 @@ Can we do something similar in Haskell? Yes, and even simpler!
 In fact, all functions could be partially applied in Haskell by default. In Haskell, we call partially 
 applied functions as "curried functions", named after Haskell Curry.
 
+#### Functor
+
+In Python, [`map`](https://docs.python.org/3/library/functions.html#map) is very useful when we want to transform 
+elements in an iterable with a function.
+
+For example, we can transform a list of integers to a list of strings with `map`.
+
+```python
+>>> list(map(str, [1, 2, 3, 4, 5]))
+['1', '2', '3', '4', '5']
+```
+
+Here, list is a "container" that holds the elements, each of which is mapped to a new element.
+
+A limitation of `map` is that the container has to be an iterable. 
+
+
+Say we have a tree:
+
+```python
+class Tree:
+    def __init__(self, left=None, right=None, val=0):
+        self.left = left
+        self.right = right
+        self.val = val
+
+    def __repr__(self):
+        return f'Tree(val={self.val}, left={self.left}, right={self.right})'
+```
+
+
+```python
+>>> my_tree = Tree(left=Tree(val=1), right=Tree(val=2))
+>>> my_tree
+Tree(val=0, left=Tree(val=1, left=None, right=None), right=Tree(val=2, left=None, right=None))
+
+```
+
+Clearly, `map` can't transform the values in this tree. In this case, we need to implement out own `map`.
+
+```python
+def map_tree(my_func, tree):
+    if tree:
+        return Tree(left=map_tree(my_func, tree.left), 
+                    right=map_tree(my_func, tree.right),
+                    val=my_func(tree.val))
+``` 
+
+```python
+>>> map_tree(lambda x: x*2, my_tree)
+Tree(val=0, left=Tree(val=2, left=None, right=None), right=Tree(val=4, left=None, right=None))
+
+>>> map_tree(lambda x: 'transformed!', my_tree)
+Tree(val=transformed!, left=Tree(val=transformed!, left=None, right=None), right=Tree(val=transformed!, left=None, right=None))
+```
+
+Now, we have a default `map` function from Python standard library, and we also have our own implementation of 
+`map_tree`, implemented for `Tree` structure. 
+Unfortunately, I can't find a straightforward way to unify these two functions in Python. By 
+unify, I meant creating a universal `map` interface that apply both on list, Tree, and essentially any types.
+
+Thanks to the robustness of type class, this universal interface is achievable in Haskell, and it is provided as part of 
+Haskell's standard library. This interface is called "Functor".
+
+Here is its definition:
+
+```haskell
+class Functor f where
+    fmap :: (a -> b) -> f a -> f b
+```
+
+`f` is a type of container that "contains" the data. It could be a list, a Tree, or anything that holds values. 
+`(a -> b)` means a function that transform a value of type `a` to a value of type `b`. `f a` is a concrete type that 
+means container `f` is holding values of type `b`. `f b` means container `f` is holding values of type `b`.
+
+All together, the definition of Functor in plain words, is any types that implements a function `fmap`, that, 
+given a function (`(a -> b)`) and a container `f` that holds values of type `a`, returns a container `f` that holds 
+values of type `b`. `fmap` is the universal map function we've been looking for.
+
+Let's look at the implementation of Functor for list.
+
+```haskell
+instance Functor [] where  
+    fmap = map  
+``` 
+ 
+It is really straightforward.The Functor implementation of list is simply `map`. 
+
+```haskell
+λ> fmap (*2) [1,2,3]
+[2,4,6]
+
+``` 
+
+Now, let's create a Tree type and see how Functor works. 
+
+```haskell
+λ> data Tree a = EmptyTree | Node a (Tree a) (Tree a) deriving (Show, Read, Eq)
+λ> tree = Node 0 (Node 1 EmptyTree EmptyTree) (Node 2 EmptyTree EmptyTree)
+λ> tree
+Node 0 (Node 1 EmptyTree EmptyTree) (Node 2 EmptyTree EmptyTree)
+```
+
+Implementing `fmap` for `Tree`:
+
+```haskell
+instance Functor Tree where  
+    fmap f EmptyTree = EmptyTree  
+    fmap f (Node x left right) = Node (f x) (fmap f left) (fmap f right)  
+```
+
+```haskell
+λ> fmap (*2) tree
+Node 0 (Node 2 EmptyTree EmptyTree) (Node 4 EmptyTree EmptyTree)
+λ> fmap (\x -> "Transformed!") tree
+Node "Transformed!" (Node "Transformed!" EmptyTree EmptyTree) (Node "Transformed!" EmptyTree EmptyTree)
+```
+
+We can see that `fmap` could be applied to any type of "container" as long as it is an instance of Functor.
