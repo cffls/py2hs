@@ -42,6 +42,7 @@ This project is inspired by [py2rs](https://github.com/rochacbruno/py2rs).
         * [Reduce](#reduce)
         * [Partial functions](#partial-functions)
         * [Functor](#functor)
+        * [Applicative](#applicative)
 
 
 ## General
@@ -860,3 +861,104 @@ Node "Transformed!" (Node "Transformed!" EmptyTree EmptyTree) (Node "Transformed
 ```
 
 We can see that `fmap` could be applied to any type of "container" as long as it is an instance of Functor.
+
+
+#### Applicative
+
+Applicative is a more powerful type of Functor.
+
+In the section of Functor, we learn how to apply a function to a Tree with `fmap`.
+
+What if we have two trees and we want to overlay the two to generate a new Tree? 
+
+```
+  Tree 1          Tree 2              New Tree
+
+    1       +       5       --->         6                
+   / \             /                    /
+  2   3           6                    8
+```
+
+What if we want to apply three trees to a function?
+```
+ _                        _      
+|  Tree 1          Tree 2  |      Tree 2              New Tree
+|                          |
+|    1       +       5     |   *    5       --->         30                
+|   / \             /      |       /                    /
+|  2   3           6       |      6                   48
+ -                        - 
+```
+
+First, let's see how to implement this in python.
+
+We can't use `map_tree` we created previously, because it only operates on one tree. We can create a 
+functions that can operates on any number of trees:
+
+```python
+def map_trees(trees, func):
+    if all(trees):
+        return Tree(val=func(*[tree.val for tree in trees]), 
+                    left=map_trees([tree.left for tree in trees], func), 
+                    right=map_trees([tree.right for tree in trees], func))
+    else:
+        return None
+```
+
+```python
+>>> tree1 = Tree(val=1, left=Tree(val=2), right=Tree(val=3))
+>>> tree2 = Tree(val=5, left=Tree(val=6))
+>>> map_trees([tree1, tree2], add)
+Tree(val=6, left=Tree(val=8, left=None, right=None), right=None)
+>>> map_trees([tree1, tree2], pow)
+Tree(val=1, left=Tree(val=64, left=None, right=None), right=None)
+>>> map_trees([tree1, tree2, tree2], lambda a, b, c: (a + b) * c)
+Tree(val=30, left=Tree(val=48, left=None, right=None), right=None)
+```
+
+Intuitively, `map_trees` is a more powerful version of `map_tree`, in a way that it takes any 
+number of trees as inputs. Similarly, applicative is a more powerful version of functor, in a way that 
+it could be passed to a function that has more than one input. In Haskell, applicative is defined as below:
+
+```haskell
+class (Functor f) => Applicative f where  
+    pure :: a -> f a  
+    (<*>) :: f (a -> b) -> f a -> f b  
+```
+
+First, the type constraint tells us that applicative has to be a Functor in the first place. Second, applicative has two 
+functions. `pure` is basically wrapping a value in a functor (or "container"). `<*>` is similar to `fmap`. A 
+quick reminder of `fmap`:
+
+```haskell
+fmap :: Functor f => (a -> b) -> f a -> f b
+```
+The only difference between `fmap` and `<*>` lies in their first argument, where functor is looking for a function, 
+`(a -> b)`, while applicative is looking for a function that is wrapped in a functor, `f (a -> b)`.
+
+Seems weird? Let's look how we can implement `map_trees` with applicative in Haskell.
+
+```haskell
+instance Applicative Tree where
+    pure x = Node x (pure x) (pure x)
+    Node a aLeft aRight <*> Node b bLeft bRight = Node (a b) (aLeft <*> bLeft) (aRight <*> bRight) 
+    _ <*> _ = EmptyTree
+```
+
+For `pure`, what we are doing is to place a value inside a Tree recursively (but also lazily).
+For `<*>`, the values of two Trees are combined by applying `b` to `a` recursively when both inputs are not empty.
+In the rest of cases, simply return an `EmptyTree`.
+
+```haskell
+λ> tree1 = Node 1 (Node 2 EmptyTree EmptyTree) (Node 3 EmptyTree EmptyTree)
+λ> tree2 = Node 5 (Node 6 EmptyTree EmptyTree) EmptyTree
+λ> pure (+) <*> tree1 <*> tree2
+Node 6 (Node 8 EmptyTree EmptyTree) EmptyTree
+λ> my_func a b c = (a + b) * c
+λ> pure my_func <*> tree1 <*> tree2 <*> tree2
+Node 30 (Node 48 EmptyTree EmptyTree) EmptyTree
+λ> my_func a b c d = a * b + c * d
+λ> pure my_func <*> tree1 <*> tree2 <*> tree2 <*> tree2
+Node 30 (Node 48 EmptyTree EmptyTree) EmptyTree
+```
+
