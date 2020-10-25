@@ -20,29 +20,27 @@ This project is inspired by [py2rs](https://github.com/rochacbruno/py2rs).
 ## Table of contents
   * [General](#general)
      * [Getting started with Haskell](#getting-started-with-haskell)
-  * [Show me the code](#show-me-the-code)
-     * [Hello World](#hello-world)
-     * [Functions](#functions)
-        * [Basic function definition](#basic-function-definition)
-        * [Flow control](#flow-control)
-        * [Explicit typing](#explicit-typing)
-        * [Lambda function](#lambda-function)
-     * [List](#list)
-        * [List creation](#list-creation)
-        * [List concatenation](#list-concatenation)
-        * [Adding element to list](#adding-element-to-list)
-        * [Indexing](#indexing)
-        * [List comprehension](#list-comprehension)
-        * [Zipping](#zipping)
-     * [Class -&gt; data](#class---data)
-     * [Interface -&gt; Type class](#interface---type-class)
-     * [Higher order functions](#higher-order-functions)
-        * [Map](#map)
-        * [Filter](#filter)
-        * [Reduce](#reduce)
-        * [Partial functions](#partial-functions)
-        * [Functor](#functor)
-        * [Applicative](#applicative)
+  * [Functions](#functions)
+     * [Basic function definition](#basic-function-definition)
+     * [Flow control](#flow-control)
+     * [Explicit typing](#explicit-typing)
+     * [Lambda function](#lambda-function)
+  * [List](#list)
+     * [List creation](#list-creation)
+     * [List concatenation](#list-concatenation)
+     * [Adding element to list](#adding-element-to-list)
+     * [Indexing](#indexing)
+     * [List comprehension](#list-comprehension)
+     * [Zipping](#zipping)
+  * [Class -&gt; data](#class---data)
+  * [Interface -&gt; Type class](#interface---type-class)
+  * [Higher order functions](#higher-order-functions)
+     * [Map](#map)
+     * [Filter](#filter)
+     * [Reduce](#reduce)
+     * [Partial functions](#partial-functions)
+     * [Functor](#functor)
+     * [Applicative](#applicative)
 
 
 ## General
@@ -60,29 +58,11 @@ Official Haskell documentation provides plenty of tutorials and books to start w
 
 https://www.haskell.org/documentation/
 
-## Show me the code
+### Code format
 
 All examples are either code snippet or interactions with python shell or [Haskell GHCi](https://wiki.haskell.org/GHC/GHCi). 
 Python shell examples starts with `>>> `, and Haskell GHCi examples starts with `λ> `. Please note that all 
 Python codes are written in [Python 3](https://docs.python.org/3/).
-
----------------------------
-
-### Hello World
-
-Python
-
-```python
->>> print("Hello world")
-Hello world
-```
-
-Haskell
-
-```haskell
-λ> print "Hello world"
-"Hello world"
-```
 
 ---------------------------
 
