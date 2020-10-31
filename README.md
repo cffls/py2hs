@@ -365,9 +365,9 @@ class Square:
 Class `Square` bundles a float number, `side`, and a function, `area`, which calculates the area of the square. 
 Attribute `side` could be directly updated. The functions bundled with the class are stateful, because 
 the outputs of the same function could be different depending on the state of the class. Being stateful is like holding 
-a double-edge sword. On one hand, you can make the a class very flexible and adaptive to changes. On the other 
-hand, however, the behavior of functions becomes non-deterministic with respect to their inputs, making it sometimes 
-unpredictable and difficult to debug. 
+a double-edge sword. On one hand, you can make the a class very flexible and adaptive to new changes. On the other 
+hand, however, the behavior of functions is non-deterministic with respect to their inputs, making it 
+unpredictable, and therefore, difficult to debug. 
 
 Now let's see a way to define a Square and a function that calculates any Square's area in Haskell.
 
@@ -468,9 +468,10 @@ area (Circle radius) = pi * radius ^ 2
 ```
 
 
-You might already observe a problem here: whenever a new type of "Shape" is created, we will need to add that type to  
-the implementation of "area". In other words, "area" is tightly coupled with "Shape"
-For instance, say we create a new type that represents continents and we want them to support calculation of 
+You might already observe a problem here: whenever a new type of "Shape" is created, we will need to add that type to 
+the implementation of "area". In other words, "area" is tightly coupled with "Shape".
+
+For instance, if we create a new type that represents continents and we want them to support calculation of 
 their areas. If we continue to use the same area function, things become ugly.
 
 First, we need to add more types to shape:
@@ -498,7 +499,7 @@ In other words, the implementation of `area` is coupled with `Shape`.
 
 
 Here is where type classes become handy. Type class is similar to the concept of interface in 
-object-oriented programming. Let's try to define our "interface" with a type class.
+object-oriented programming. Let's try to define our "interface" using a type class.
 
 
 ```haskell
@@ -506,8 +507,9 @@ class MyObject a where
     area :: a -> Float
 ```
 
-What we are are seeing, is a type class, `MyObject`, that declares a behavior (or function), `area`, 
-which returns a Float when a type of `MyObject` is given.
+What we are are seeing, is a type class, `MyObject`, that declares a behavior (or interface), `area`, 
+which returns a Float when a type of `MyObject` is given. Notice that the `class` here is not the same as the 
+"class" in Python.
 
 Now, we can define Shapes and Continents separately and make them support area calculation at the same time.
 
@@ -548,8 +550,11 @@ instance MyObject Continent where
 
 The codes of Shape and Continent are completely independent, but we can still apply the same function (`area`) on them. 
 
-This concept is actually nothing new in Python. Remember [data model](https://docs.python.org/3/reference/datamodel.html) 
-in python? For example, a class can implement  `__eq__` so we can apply `==` operator to it:
+This concept is actually nothing new in Python. 
+Remember [data model](https://docs.python.org/3/reference/datamodel.html)? Yes, type class is a more power version of 
+data model.
+
+In python, a class can implement  `__eq__` so we can apply `==` operator to it:
 
 
 ```python
@@ -659,9 +664,8 @@ Reduce is called "fold" in Haskell
 
 #### Partial functions
 
-In Python, we can create a function that takes a function and return a new function that add things 
-on top of it. For example, we can make a "partial" function that apply arguments partially to another 
-function.
+In Python, a function can operate on another function. 
+For example, we can make a "partial" function that apply arguments partially to another function.
 
 ```python
 def add(x, y):
@@ -720,12 +724,12 @@ Can we do something similar in Haskell? Yes, and even simpler!
 ```
 
 In fact, all functions could be partially applied in Haskell by default. In Haskell, we call partially 
-applied functions as "curried functions", named after Haskell Curry.
+applied functions as "curried functions", named after [Haskell Curry](https://en.wikipedia.org/wiki/Haskell_Curry).
 
 #### Functor
 
 In Python, [`map`](https://docs.python.org/3/library/functions.html#map) is very useful when we want to transform 
-elements in an iterable with a function.
+an iterable.
 
 For example, we can transform a list of integers to a list of strings with `map`.
 
@@ -739,7 +743,7 @@ Here, list is a "container" that holds the elements, each of which is mapped to 
 A limitation of `map` is that the container has to be an iterable. 
 
 
-Say we have a tree:
+Say we have a tree structure like below:
 
 ```python
 class Tree:
@@ -780,8 +784,8 @@ Tree(val=transformed!, left=Tree(val=transformed!, left=None, right=None), right
 
 Now, we have a default `map` function from Python standard library, and we also have our own implementation of 
 `map_tree`, implemented for `Tree` structure. 
-Unfortunately, I can't find a straightforward way to unify these two functions in Python. By 
-unify, I meant creating a universal `map` interface that apply both on list, Tree, and essentially any types.
+Unfortunately, there is not a straightforward way to unify these two functions in Python. By 
+unify, I meant a universal `map` interface that apply both on list, Tree, and essentially any types.
 
 Thanks to the robustness of type class, this universal interface is achievable in Haskell, and it is provided as part of 
 Haskell's standard library. This interface is called "Functor".
@@ -896,7 +900,7 @@ Tree(val=1, left=Tree(val=64, left=None, right=None), right=None)
 Tree(val=30, left=Tree(val=48, left=None, right=None), right=None)
 ```
 
-Intuitively, `map_trees` is a more powerful version of `map_tree`, in a way that it takes any 
+Intuitively, `map_trees` is a more powerful version of `map_tree`, in a way that it accepts any 
 number of trees as inputs. Similarly, applicative is a more powerful version of functor, in a way that 
 it could be passed to a function that has more than one input. In Haskell, applicative is defined as below:
 
