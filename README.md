@@ -39,8 +39,8 @@ This project is inspired by [py2rs](https://github.com/rochacbruno/py2rs).
      * [Filter](#filter)
      * [Reduce](#reduce)
      * [Partial functions](#partial-functions)
-     * [Functor](#functor)
-     * [Applicative](#applicative)
+ * [Functor](#functor)
+ * [Applicative](#applicative)
 
 
 ## General
@@ -726,7 +726,9 @@ Can we do something similar in Haskell? Yes, and even simpler!
 In fact, all functions could be partially applied in Haskell by default. In Haskell, we call partially 
 applied functions as "curried functions", named after [Haskell Curry](https://en.wikipedia.org/wiki/Haskell_Curry).
 
-#### Functor
+---------------------------
+
+### Functor
 
 In Python, [`map`](https://docs.python.org/3/library/functions.html#map) is very useful when we want to transform 
 an iterable.
@@ -846,8 +848,9 @@ Node "Transformed!" (Node "Transformed!" EmptyTree EmptyTree) (Node "Transformed
 
 We can see that `fmap` could be applied to any type of "container" as long as it is an instance of Functor.
 
+---------------------------
 
-#### Applicative
+### Applicative
 
 Applicative is a more powerful type of Functor.
 
@@ -865,9 +868,9 @@ What if we have two trees and we want to overlay the two to generate a new Tree?
 
 What if we want to apply three trees to a function?
 ```
- _                        _      
-|  Tree 1          Tree 2  |      Tree 2              New Tree
-|                          |
+ 
+   Tree 1          Tree 2         Tree 2              New Tree
+ _                        _
 |    1       +       5     |   *    5       --->         30                
 |   / \             /      |       /                    /
 |  2   3           6       |      6                   48
