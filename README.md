@@ -41,6 +41,7 @@ This project is inspired by [py2rs](https://github.com/rochacbruno/py2rs).
      * [Partial functions](#partial-functions)
  * [Functor](#functor)
  * [Applicative](#applicative)
+ * [Monoid](#monoid)
 
 
 ## General
@@ -51,7 +52,7 @@ This project is inspired by [py2rs](https://github.com/rochacbruno/py2rs).
 | [Type System](https://en.wikipedia.org/wiki/Type_system)      | Dynamically typed | Statically typed|
 | First appeared | 1989 | 1990 |
 | File extensions | .py, .pyw, .pyc | .hs, .lhs | 
-| Programming guidelines | [Haskell programming guidelines](https://wiki.haskell.org/Programming_guidelines#Let_or_where_expressions) | [PEP8](https://www.python.org/dev/peps/pep-0008/)
+| Programming guidelines | [PEP8](https://www.python.org/dev/peps/pep-0008/) | [Haskell programming guidelines](https://wiki.haskell.org/Programming_guidelines#Let_or_where_expressions) |
 
 ### Getting started with Haskell
 Official Haskell documentation provides plenty of tutorials and books to start with.
@@ -871,8 +872,8 @@ What if we want to apply three trees to a function?
  
    Tree 1          Tree 2         Tree 2              New Tree
  _                        _
-|    1       +       5     |   *    5       --->         30                
-|   / \             /      |       /                    /
+|    1               5     |        5                    30                
+|   / \      +      /      |   *   /        --->        /
 |  2   3           6       |      6                   48
  -                        - 
 ```
@@ -932,7 +933,7 @@ instance Applicative Tree where
     _ <*> _ = EmptyTree
 ```
 
-For `pure`, what we are doing is to place a value inside a Tree recursively (but also lazily).
+What `pure` does is simply placing a value inside a container (a tree in the case above).
 For `<*>`, the values of two Trees are combined by applying `b` to `a` recursively when both inputs are not empty.
 In the rest of cases, simply return an `EmptyTree`.
 
@@ -949,3 +950,223 @@ Node 30 (Node 48 EmptyTree EmptyTree) EmptyTree
 Node 30 (Node 48 EmptyTree EmptyTree) EmptyTree
 ```
 
+---------------------------
+
+### Monoid
+
+In the section of Applicative, we learnt how a series of functors could be passed as arguments to a regular function. 
+Now, let's consider a similar but slightly different problem: 
+how can we apply a function to reduce or fold a tree recursively?
+e.g. calculating the sum or product of values in a tree. 
+
+
+There are many of ways to implement this in python. Here is one way:
+
+```python
+def reduce_tree(tree, func, default=1):
+    if tree:
+        reduced_left = func(reduce_tree(tree.left, func, default=default), tree.val)
+        reduced = func(reduced_left, reduce_tree(tree.right, func, default=default))
+        return reduced
+    else:
+        return default
+```
+
+```python
+>>> tree = Tree(val=1, left=Tree(val=2), right=Tree(val=4))
+>>> reduce_tree(tree, lambda a,b: a+b, default=0)
+7
+>>> reduce_tree(tree, lambda a,b: a*b, default=1)
+8
+>>> reduce_tree(tree, min, default=float("inf"))
+1
+>>> reduce_tree(tree, max, default=-float("inf"))
+4
+```
+
+We can also make the `Tree` iterable, so we can directly use `reduce` and make our code a bit more functional.
+
+```python
+class Tree:
+    def __init__(self, left=None, right=None, val=0):
+        self.left = left
+        self.right = right
+        self.val = val
+
+    def __repr__(self):
+        return f'Tree(val={self.val}, left={self.left}, right={self.right})'
+
+    def __iter__(self):
+        if self.left:
+            yield from self.left
+        yield self.val
+        if self.right:
+            yield from self.right
+```
+
+```python
+>>> tree = Tree(val=1, left=Tree(val=2), right=Tree(val=4))
+>>> list(tree)
+[2, 1, 4]
+>>> from functools import reduce
+>>> reduce(lambda a,b: a+b, tree, 0)
+7
+>>> reduce(lambda a,b: a*b, tree, 1)
+8
+>>> reduce(min, tree, float("inf"))
+1
+>>> reduce(max, tree, -float("inf"))
+4
+```
+
+There is an important assumption in implementations above. That is, all functions being applied to the tree has 
+to be [associative](https://en.wikipedia.org/wiki/Associative_property). Associativity means that the order of function 
+application doesn't determine the final output value. To define it more strictly, 
+a binary function `f` is associative if the following condition satisfy for all `x`, `y`, `z` in S, 
+where S is a set of values. 
+ 
+```
+f(x, f(y, z)) = f(f(x,y), z)
+```
+
+It is not hard to tell that `+`, `*`, `min`, and `max` are all associative. That's why we can apply them to a Tree 
+without worrying about the order in which they are applied internally.
+
+An example of non-associative function is average. e.g. `average(average(a, b), c)` is not equal to 
+`average(a, average(b, c))`.
+If we apply average to a tree, the final value will be different depending on whether left child or right child is 
+reduced with the root first.
+
+```python
+def reduce_tree(tree, func, default=1):
+    if tree:
+        reduced_left = func(reduce_tree(tree.left, func, default=default), tree.val)
+        reduced = func(reduced_left, reduce_tree(tree.right, func, default=default))
+        return reduced
+    else:
+        return default
+
+def reduce_tree2(tree, func, default=1):
+    if tree:
+        reduced_right = func(tree.val, reduce_tree2(tree.right, func, default=default))
+        reduced = func(reduce_tree2(tree.left, func, default=default), reduced_right)
+        return reduced
+    else:
+        return default
+``` 
+
+```python
+>>> tree
+Tree(val=1, left=Tree(val=2, left=None, right=None), right=Tree(val=4, left=None, right=None))
+# Addition is not determined by the order in which values are applied
+>>> reduce_tree(tree, lambda a,b: a+b, default=0)
+7
+>>> reduce_tree2(tree, lambda a,b: a+b, default=0)
+7
+# Average is determined by the order in which values are applied
+>>> reduce_tree(tree, lambda a,b: (a+b)/2, default=0)
+0.875
+>>> reduce_tree2(tree, lambda a,b: (a+b)/2, default=0)
+0.75
+```
+
+Why are we talking about associativity? Because it is the essence of monoids.
+In Haskell, Monoid is a type class that has an associative binary function and a identity value, `A`, which, when applied 
+the binary function along with any value, `B`, always yields `B` as the output.
+
+For example, `0` is the identity value with respect to binary function `+`, and `1` is the identity value with respect 
+to binary function `*`.
+
+Here is the formal definition of Monoid type class:
+
+```haskell
+class Monoid m where  
+    mempty :: m  
+    mappend :: m -> m -> m  
+    mconcat :: [m] -> m  
+    mconcat = foldr mappend mempty  
+```
+
+`mempty` is the identity value, and `mappend` is the associative binary function.  
+`mconcat` is a function that "concatenates" a list of monoids into one, and we get it for free with a default 
+implementation.
+
+Now, let's first see how to make a foldable tree in haskell *without* using monoids.
+
+```haskell
+import qualified Data.Foldable as F  
+
+data Tree a = EmptyTree | Node a (Tree a) (Tree a) deriving (Show, Read, Eq)
+
+instance F.Foldable Tree where
+    foldr f z EmptyTree = z
+    foldr f z (Node val left right) = f (f val rightResult) leftResult
+	    where
+	    rightResult = foldr f right z
+	    leftResult = foldr f left z
+```
+
+The code seems fine in the first look. We pass the reduced results from right and left to function `f`, and we get the 
+final reduced result . 
+However, GHC complains!
+```
+    • Couldn't match expected type ‘a’ with actual type ‘b’
+
+  |
+7 |     foldr f z (Node val left right) = f (f val rightResult) leftResult
+  |                                          ^^^^^^^^^^^^^^^^^
+``` 
+Well, it turns that function `f` (whose type is `a -> b -> b`) is expecting its first argument to be type `a`, but it got 
+type `b`, which is the output of `f val rightResult`. In fact, we don't really have a way of turning type `b` into 
+type `a`. We are stuck here.
+
+Fortunately, `Foldable` provides a second interface, `foldMap`, which is easier to implement:
+```haskell
+foldMap :: (Monoid m, Foldable t) => (a -> m) -> t a -> m  
+```
+
+Now, instead of taking a function of type `a -> b -> b`, `foldMap` takes a function of type `a -> m`, which transforms 
+a type, `a`, to a monoid, `m`.
+
+Here is the implementation of foldMap for Tree:
+
+```haskell
+instance F.Foldable Tree where  
+    foldMap f EmptyTree = mempty  
+    foldMap f (Node x left right) = mconcat [foldMap f l, f x, foldMap f r]
+```
+
+Now we can see the advantage of using monoid here. 
+`F.foldMap f left`, `f x`, and `F.foldMap f right` all return a monoid as outputs, which could be "concatenated" into  
+a single monoid with `mconcat`. Now, we just need to find a function that turns a value of a Node to a monoid.
+
+A simple way is to create a newtype as a monoid for numbers.  
+
+```haskell
+newtype Product a =  Product { getProduct :: a }  
+    deriving (Eq, Ord, Read, Show, Bounded)  
+
+instance Num a => Monoid (Product a) where  
+    mempty = Product 1  
+    Product x `mappend` Product y = Product (x * y)  
+``` 
+
+```haskell
+λ> getProduct $ Product 3 `mappend` Product 4
+12
+```
+
+Now, we can use `Product` as a monoid for foldMap.
+```haskell
+λ> tree = Node 2 (Node 1 EmptyTree EmptyTree) (Node 4 EmptyTree EmptyTree)
+λ> getProduct $ foldMap Product tree
+8
+```
+
+Not surprisingly, `Product` is defined as one of the monoids in standard module `Data.Monoid`, along with Sum, Min, Max, 
+and many more.
+
+```haskell
+λ> getSum $ foldMap Sum tree
+7
+```
