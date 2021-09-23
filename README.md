@@ -25,6 +25,7 @@ This project is inspired by [py2rs](https://github.com/rochacbruno/py2rs).
      * [Flow control](#flow-control)
      * [Explicit typing](#explicit-typing)
      * [Lambda function](#lambda-function)
+     * [Comments](#comments)
   * [List](#list)
      * [List creation](#list-creation)
      * [List concatenation](#list-concatenation)
@@ -52,7 +53,7 @@ This project is inspired by [py2rs](https://github.com/rochacbruno/py2rs).
 | [Type System](https://en.wikipedia.org/wiki/Type_system)      | Dynamically typed | Statically typed|
 | First appeared | 1989 | 1990 |
 | File extensions | .py, .pyw, .pyc | .hs, .lhs | 
-| Programming guidelines | [PEP8](https://www.python.org/dev/peps/pep-0008/) | [Haskell programming guidelines](https://wiki.haskell.org/Programming_guidelines#Let_or_where_expressions) |
+| Programming guidelines | [PEP8](https://www.python.org/dev/peps/pep-0008/) | [Haskell programming guidelines](https://wiki.haskell.org/Programming_guidelines) |
 
 ### Getting started with Haskell
 Official Haskell documentation provides plenty of tutorials and books to start with.
@@ -69,7 +70,7 @@ Python codes are written in [Python 3](https://docs.python.org/3/).
 
 ### Functions
 
-#### Basic function definition
+#### Basic function syntax
 Python
 
 ```python
@@ -150,6 +151,29 @@ Haskell
 ```haskell
 λ> map (\x -> x + 1) [1, 2, 3]
 [2,3,4]
+```
+
+#### Comments
+Python
+
+```python
+# This is a python comment
+'''
+Python
+multiline
+comment
+'''
+```
+
+Haskell
+
+```haskell
+-- This is a haskell comment
+{-
+haskell
+multiline
+comment
+-}
 ```
 
 ---------------------------
