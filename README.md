@@ -390,8 +390,8 @@ class Square:
 Class `Square` bundles a float number, `side`, and a function, `area`, which calculates the area of the square. 
 Attribute `side` could be directly updated. The functions bundled with the class are stateful, because 
 the outputs of the same function could be different depending on the state of the class. Being stateful is like holding 
-a double-edge sword. On one hand, you can make the a class very flexible and adaptive to new changes. On the other 
-hand, however, the behavior of functions is non-deterministic with respect to their inputs, making it 
+a double-edge sword. On one hand, you can make a class very flexible and adaptive to new changes. On the other 
+hand, however, the behavior of functions could be non-deterministic with respect to their inputs, making them 
 unpredictable, and therefore, difficult to debug. 
 
 Now let's see a way to define a Square and a function that calculates any Square's area in Haskell.
@@ -494,7 +494,7 @@ area (Circle radius) = pi * radius ^ 2
 
 
 You might already observe a problem here: whenever a new type of "Shape" is created, we will need to add that type to 
-the implementation of "area". In other words, "area" is tightly coupled with "Shape".
+the implementation of "area".
 
 For instance, if we create a new type that represents continents and we want them to support calculation of 
 their areas. If we continue to use the same area function, things become ugly.
@@ -533,8 +533,8 @@ class MyObject a where
 ```
 
 What we are are seeing, is a type class, `MyObject`, that declares a behavior (or interface), `area`, 
-which returns a Float when a type of `MyObject` is given. Notice that the `class` here is not the same as the 
-"class" in Python.
+which returns a Float when a type of `MyObject` is given. Notice that the `class` in Haskell is not the same as the 
+"class" in Python. Instead, it is more similar to an abstract class in Python.
 
 Now, we can define Shapes and Continents separately and make them support area calculation at the same time.
 
@@ -547,6 +547,10 @@ instance MyObject Shape where
     area (Rectangle height width) = height * width
 
 ```
+
+A new Haskell keyword, `instance`, is used here. `instance` declares that a data type is to implement all 
+"interfaces" defined in a type class. In our case, `instance MyObject Shape` could be read as `MyObject` will implement 
+all functions declared in type cass `Shape`. In Python, it will look something like this `class MyObject(Shape):`.
 
 ```haskell
 λ> let a = Square 4
@@ -577,7 +581,7 @@ The codes of Shape and Continent are completely independent, but we can still ap
 
 This concept is actually nothing new in Python. 
 Remember [data model](https://docs.python.org/3/reference/datamodel.html)? Yes, type class is a more power version of 
-data model.
+data model, which is a list of pre-defined interfaces by Python, while type class can define any possible interfaces.
 
 In python, a class can implement  `__eq__` so we can apply `==` operator to it:
 
@@ -689,8 +693,9 @@ Reduce is called "fold" in Haskell
 
 #### Partial functions
 
-In Python, a function can operate on another function. 
-For example, we can make a "partial" function that apply arguments partially to another function.
+In Python, a function can be passed as an argument to another function, which is called higher order function. 
+For example, we can create a higher order function that supplies default arguments to other functions. Below, we 
+have function `add` and `multiply` that both take two input arguments.
 
 ```python
 def add(x, y):
@@ -698,14 +703,17 @@ def add(x, y):
 
 def multiply(x, y):
     return x * y
+```
 
+Now, we can create a higher order function that applies default input argument to the two functions above. 
+```python
 def partial(func, *partial_args):
     def apply(*remaining_args):
         return func(*partial_args,  *remaining_args)
     return apply
 ```
 
-Now, we can use a combination of `partial` and another function to construct new functions. 
+Now, we can use a combination of `partial` and another function to construct interesting functions. 
 
 ```python
 >>> increment = partial(add, 1)
@@ -791,7 +799,7 @@ Tree(val=0, left=Tree(val=1, left=None, right=None), right=Tree(val=2, left=None
 
 ```
 
-Clearly, `map` can't transform the values in this tree. In this case, we need to implement out own `map`.
+Clearly, `map` can't transform the values in the tree structure. In this case, it is easier to implement our own `map`.
 
 ```python
 def map_tree(my_func, tree):
@@ -812,23 +820,23 @@ Tree(val=transformed!, left=Tree(val=transformed!, left=None, right=None), right
 Now, we have a default `map` function from Python standard library, and we also have our own implementation of 
 `map_tree`, implemented for `Tree` structure. 
 Unfortunately, there is not a straightforward way to unify these two functions in Python. By 
-unify, I meant a universal `map` interface that apply both on list, Tree, and essentially any types.
+unify, we mean a universal mapper that can apply a function to list, Tree, and essentially any type of data structures.
 
-Thanks to the robustness of type class, this universal interface is achievable in Haskell, and it is provided as part of 
-Haskell's standard library. This interface is called "Functor".
+Thanks to the robustness of type class, this universal mapper is possible in Haskell, and it is provided as part of 
+Haskell's standard library. It is called "Functor".
 
-Here is its definition:
+Here is the definition of functor:
 
 ```haskell
 class Functor f where
     fmap :: (a -> b) -> f a -> f b
 ```
 
-`f` is a type of container that "contains" the data. It could be a list, a Tree, or anything that holds values. 
+`f` is a type of container that "contains" data. It could be a list, a Tree, or anything that holds data. 
 `(a -> b)` means a function that transform a value of type `a` to a value of type `b`. `f a` is a concrete type that 
-means container `f` is holding values of type `b`. `f b` means container `f` is holding values of type `b`.
+means container `f` is holding values of type `a`. `f b` means container `f` holds values of type `b`.
 
-All together, the definition of Functor in plain words, is any types that implements a function `fmap`, that, 
+All together, the definition of Functor in plain words, is something that implements a function `fmap`, that, 
 given a function (`(a -> b)`) and a container `f` that holds values of type `a`, returns a container `f` that holds 
 values of type `b`. `fmap` is the universal map function we've been looking for.
 
@@ -839,7 +847,7 @@ instance Functor [] where
     fmap = map  
 ``` 
  
-It is really straightforward.The Functor implementation of list is simply `map`. 
+It is really straightforward. The Functor implementation of list is simply `map`. 
 
 ```haskell
 λ> fmap (*2) [1,2,3]
@@ -847,7 +855,7 @@ It is really straightforward.The Functor implementation of list is simply `map`.
 
 ``` 
 
-Now, let's create a Tree type and see how Functor works. 
+Now, let's create a Tree type and see how Functor can work in such context. 
 
 ```haskell
 λ> data Tree a = EmptyTree | Node a (Tree a) (Tree a) deriving (Show, Read, Eq)
@@ -904,7 +912,7 @@ What if we want to apply three trees to a function?
 
 First, let's see how to implement this in python.
 
-We can't use `map_tree` we created previously, because it only operates on one tree. We can create a 
+We can't use `map_tree` created previously, because it only operates on one tree. We can create a 
 functions that can operates on any number of trees:
 
 ```python
@@ -928,8 +936,8 @@ Tree(val=1, left=Tree(val=64, left=None, right=None), right=None)
 Tree(val=30, left=Tree(val=48, left=None, right=None), right=None)
 ```
 
-Intuitively, `map_trees` is a more powerful version of `map_tree`, in a way that it accepts any 
-number of trees as inputs. Similarly, applicative is a more powerful version of functor, in a way that 
+Intuitively, `map_trees`, which accepts any numbers of trees as inputs, is a more powerful version of `map_tree`, which
+takes only two trees as inputs. Similarly, applicative is a more powerful version of functor, in a way that 
 it could be passed to a function that has more than one input. In Haskell, applicative is defined as below:
 
 ```haskell
@@ -959,7 +967,8 @@ instance Applicative Tree where
 
 What `pure` does is simply placing a value inside a container (a tree in the case above).
 For `<*>`, the values of two Trees are combined by applying `b` to `a` recursively when both inputs are not empty.
-In the rest of cases, simply return an `EmptyTree`.
+For the rest of cases, simply return an `EmptyTree`. With `Tree` being an applicative, we can now apply a function takes
+X number of inputs to X number of trees.
 
 ```haskell
 λ> tree1 = Node 1 (Node 2 EmptyTree EmptyTree) (Node 3 EmptyTree EmptyTree)
@@ -972,6 +981,74 @@ Node 30 (Node 48 EmptyTree EmptyTree) EmptyTree
 λ> my_func a b c d = a * b + c * d
 λ> pure my_func <*> tree1 <*> tree2 <*> tree2 <*> tree2
 Node 30 (Node 48 EmptyTree EmptyTree) EmptyTree
+```
+
+In the code above, we can pass multiple trees as inputs to a pure function by connecting them with `<*>`,
+e.g. `pure (+) <*> tree1 <*> tree2`. How and why does this work exactly? 
+
+If we look at `pure (+)` carefully, it is an applicative that contains a function with type `a -> a -> a`.
+```haskell
+λ> :t pure (+)
+pure (+) :: (Applicative f, Num a) => f (a -> a -> a)
+```
+
+Intuitively, `pure (+)` could be visualized as an abstract container whose element is `(+)`. When the container is 
+`Tree`, for example, it could be visualized as an infinity Tree where each node contains `(+)` a function, as visualized 
+below. One thing to be clear is that this "addition tree" is not fully constructed in memory. Instead, the nodes will be 
+lazily created as we apply another Tree to it with `<*>`. 
+
+```
+Applicative Tree of (+)
+
+         (+)
+        /  \
+      (+)  (+)
+      / \  / \
+    (+)(+)(+)(+)
+   . . . . . . . .  
+```
+
+Now if we apply a Tree to `pure (+)` using `<*>`, we end up with a concrete  
+Tree applicative that contains a function of type `a -> a`. The type wrapped in the applicative has now changed from 
+`a -> a -> a` (addition function, `(+)`) to `a -> a`, because the first argument of the addition function has been filled 
+with `tree1`.
+
+```haskell
+λ> tree1 =  Node 1 (Node 2 EmptyTree EmptyTree) (Node 3 EmptyTree EmptyTree)
+λ> :t pure (+) <*> tree1
+pure (+) <*> tree1 :: Num a => Tree (a -> a)
+```
+
+`pure (+) <*> tree1` could be visualized as below:
+
+```
+     (+)1
+     /  \
+    /    \
+  (+)2   (+)3
+```
+
+With `pure (+) <*> tree1`, we can apply it with another Tree using `<*>` again, and finally we get a Tree that contains 
+just numbers.
+```haskell
+λ> tree2 = Node 5 (Node 6 EmptyTree EmptyTree) EmptyTree
+λ> result = pure (+) <*> tree1 <*> tree2
+λ> result
+Node 6 (Node 8 EmptyTree EmptyTree) EmptyTree
+λ> :t result
+result :: Num b => Tree b
+```
+
+`pure (+) <*> tree1 <*> tree2` could be intuitively visualized like this:
+
+```
+    pure (+) <*> tree1      <*>       tree 2       ->       result
+
+          (+)1                          5                    6
+          /  \                         /                    /
+         /    \                       /                    /
+      (+)2   (+)3                    6                    8
+
 ```
 
 ---------------------------
@@ -1095,8 +1172,8 @@ Tree(val=1, left=Tree(val=2, left=None, right=None), right=Tree(val=4, left=None
 ```
 
 Why are we talking about associativity? Because it is the essence of monoids.
-In Haskell, Monoid is a type class that has an associative binary function and a identity value, `A`, which, when applied 
-the binary function along with any value, `B`, always yields `B` as the output.
+In Haskell, Monoid is a type class that has an associative binary function and an identity value, `A`, which, when 
+applied the binary function along with any value, `B`, always yields `B` as the output.
 
 For example, `0` is the identity value with respect to binary function `+`, and `1` is the identity value with respect 
 to binary function `*`.
