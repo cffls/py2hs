@@ -43,17 +43,18 @@ This project is inspired by [py2rs](https://github.com/rochacbruno/py2rs).
  * [Functor](#functor)
  * [Applicative](#applicative)
  * [Monoid](#monoid)
+ * [Monad](#monad)
 
 
 ## General
 
-| Definition      | Python      | Haskell  |
-| -----------    | ----------- | -------- |
-| [Programming paradigm](https://en.wikipedia.org/wiki/Programming_paradigm)   | [Imperative](https://en.wikipedia.org/wiki/Imperative_programming)  | [Purely functional](https://en.wikipedia.org/wiki/Purely_functional_programming) |
-| [Type System](https://en.wikipedia.org/wiki/Type_system)      | Dynamically typed | Statically typed|
-| First appeared | 1989 | 1990 |
-| File extensions | .py, .pyw, .pyc | .hs, .lhs | 
-| Programming guidelines | [PEP8](https://www.python.org/dev/peps/pep-0008/) | [Haskell programming guidelines](https://wiki.haskell.org/Programming_guidelines) |
+| Definition                                                                 | Python                                                             | Haskell                                                                           |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| [Programming paradigm](https://en.wikipedia.org/wiki/Programming_paradigm) | [Imperative](https://en.wikipedia.org/wiki/Imperative_programming) | [Purely functional](https://en.wikipedia.org/wiki/Purely_functional_programming)  |
+| [Type System](https://en.wikipedia.org/wiki/Type_system)                   | Dynamically typed                                                  | Statically typed                                                                  |
+| First appeared                                                             | 1989                                                               | 1990                                                                              |
+| File extensions                                                            | .py, .pyw, .pyc                                                    | .hs, .lhs                                                                         |
+| Programming guidelines                                                     | [PEP8](https://www.python.org/dev/peps/pep-0008/)                  | [Haskell programming guidelines](https://wiki.haskell.org/Programming_guidelines) |
 
 ### Getting started with Haskell
 Official Haskell documentation provides plenty of tutorials and books to start with.
@@ -1270,4 +1271,387 @@ and many more.
 ```haskell
 λ> getSum $ foldMap Sum tree
 7
+```
+
+---------------------------
+
+### Monad
+
+[Monad](https://en.wikipedia.org/wiki/Monad_(functional_programming)) is one of the most important concepts in 
+functional programming, but it is not well known in the realm of object-oriented programming. 
+Nevertheless, we will try to implement a monad in Python, use it in an example, and then show how it could be 
+equivalently implemented and used in Haskell.
+
+Programs can fail with exceptions, which can usually cause side effects in control flows. 
+
+For example, in Python, a division function will throw a `ZeroDivisionError` when the divisor is 0. 
+
+```python
+>>> def div(x, y):
+...     return x / y
+...
+>>> div(4, 2)
+2.0
+>>> div(3, 2)
+1.5
+>>> div(3, 0)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "<stdin>", line 2, in div
+ZeroDivisionError: division by zero
+```
+
+When a `ZeroDivisionError` exception is thrown and not handled within `div`, the exception will be propagated to the 
+caller of `div`, causing a side effect. If we want to get rid of such side effect, or in other words, 
+make it a [pure](https://en.wikipedia.org/wiki/Pure_function) function, we need to catch and handle any possible 
+exception within it. 
+This could be implemented by creating a wrapper class. Let's call it `Maybe`, which stores a successfully returned 
+value or a "failure" state when an exception is thrown. We also need a wrapper function that safely calls the division  
+function and wraps the returned value into the wrapper. See the implementation below.
+
+```python
+class Maybe():
+    def __init__(self, value=None, failed=False):
+        self.value = value
+        self.failed = failed
+
+    def __repr__(self):
+        if self.failed:
+            return "Nothing"
+        else:
+            return f"Just {self.value}"
+
+def safe_div(x, y):
+    try:
+        value = x / y
+        return Maybe(value=value)
+    except Exception as e:
+        print(f"Got exception: {e}") # IO is also a side effect, but we will keep it here to help us understand
+                                     # the behavior of this function in examples below.
+        return Maybe(failed=True)
+```
+
+With class `Maybe` and function `safe_div`, we can both eliminate its side effects and retain its pureness.
+
+```python
+>>> safe_div(4, 2)
+Just 2.0
+>>> safe_div(4, 1)
+Just 4.0
+>>> safe_div(4, 0)
+Got exception: division by zero
+Nothing
+```
+
+However, with this design, we will inevitably run into a problem when more than one `safe_div` are chained together:
+
+```
+>>> x = safe_div(4, 2)
+>>> y = safe_div(2, 1)
+>>> x
+Just 2.0
+>>> y
+Just 2.0
+>>> safe_div(x, y)
+Got exception: unsupported operand type(s) for /: 'Maybe' and 'Maybe'
+Nothing
+```
+
+`safe_div(x, y)` is supposed to return `Just 1.0`, but it ends up returning `Nothing`! 
+The problem is that both `x` and `y` returned from `safe_div` are in type `Maybe`, but operator "`/`" doesn't know how 
+to operate on `Maybe`, so an exception is thrown by `div` and caught inside `safe_div`, which returned `Nothing`. 
+
+A simple way to fix this is to create another function `safe_div_maybe`, which takes inputs in `Maybe` types and calls 
+`safe_div` internally.
+
+```python
+def safe_div_maybe(x: Maybe, y: Maybe) -> Maybe:
+    if not x.failed and not y.failed:
+        return safe_div(x.value, y.value)
+    else:
+        return Maybe(failed=True)
+```
+
+```python
+>>> x = safe_div(4, 2)
+>>> y = safe_div(2, 1)
+>>> x
+Just 2.0
+>>> y
+Just 2.0
+>>> safe_div_maybe(x, y)
+Just 1.0
+```
+
+However, with this approach, we need to create two functions (`safe_div` and `safe_div_maybe`) that do pretty 
+much the same thing except that their input types are different. In addition, for every new function, e.g. `func_x`, 
+we will need to create `safe_func_x` and its counter part `safe_func_x_maybe`. This doesn't seem to be an elegant 
+solution.
+
+The root problem is that function `safe_div` is not composable, because its input type (`int`) and 
+its output type (`Maybe`) are different.
+Therefore, we cannot simply pass an output value from a `safe_div` as an input argument to another `safe_div`. 
+In comparison, the original operator "`/`" is composable, because we can pass the output value from a "`/`" to another 
+"`/`" without any problem, as shown below:
+
+```python
+>>> x = 4 / 2
+>>> y = 2 / 1
+>>> x / y
+1.0
+```
+
+Is there a wonderland where we can enjoy both the composability of "`/`" and the pureness of `safe_div`? 
+Yes, this is where monad shines.
+
+Let's create a magical function, named "bind".
+
+```python
+from typing import Callable
+
+def bind(x: Maybe, some_safe_call: Callable[..., Maybe]) -> Maybe:
+    if x.failed:
+        return Maybe(failed=True)
+    else:
+        return some_safe_call(x.value)
+```
+
+`bind` takes two inputs: a Maybe object, and a function that takes a raw value and returns a Maybe object. 
+First, it checks if the value stored in the first input is failed. If so, it simply returns 
+a failed `Maybe`. Otherwise, it will pass its internally stored value to function `some_safe_call`, and directly return 
+the output of it. With `bind`, we can now chain multiple `safe_div`'s together:
+
+```python
+>>> maybe_x = safe_div(4, 2)
+>>> maybe_y = safe_div(4, 1)
+>>> bind(maybe_x, lambda x: bind(maybe_y, lambda y: safe_div(x, y)))
+Just 0.5
+```
+
+How does it work? Let's first look at the most inner call `safe_div(x, y)`. We are already familiar with this. 
+`x` and `y` are passed to `safe_div` as raw integers (not `Maybe` type). 
+The more interesting part is the two lambda functions introduced. 
+The first `bind` is called with input `maybe_x` and a lambda function. 
+The purpose of the lambda function is to, by using `bind`, create an environment/context where the actual value `x` 
+could be extracted from `maybe_x` and passed to function `safe_div`. Here, `bind` could also be seen as a variable 
+assignment, which assigns the actual value stored in `maybe_x` to a temporary variable `x`. 
+The same idea also applies to `maybe_y`, whose actual value is extracted by the second `bind` and passed along with `x` 
+to `safe_div`.
+
+Now, if we tweak the code with some new lines in between, it actually looks imperative in a way that each `bind` call 
+acts like a reversed variable assignment, where the variable shows after its assigned value. This format is not 
+a good style but it helps us to understand the binding relations. 
+
+```python
+bind(         maybe_x,      lambda x:
+  ^              ^                 ^
+assignment     value           variable
+```
+
+```python
+>>> maybe_x = safe_div(4, 2) # Just 2
+>>> maybe_y = safe_div(4, 1) # Just 4
+>>> bind(maybe_x, lambda x:  # bind the value stored in maybe_x to x
+... bind(maybe_y, lambda y:  # bind the value stored in maybe_y to y
+... safe_div(x, y)           # x=2 and y=4 are passed to safe_div
+... )                        # ) matches ( from second bind
+... )                        # ) matches ( from first bind
+Just 0.5
+
+# Notice that we are free to change the order in which "x" and "y" are defined
+
+>>> maybe_x = safe_div(4, 2) # Just 2
+>>> maybe_y = safe_div(4, 1) # Just 4
+>>> bind(maybe_y, lambda y:  # bind the value stored in maybe_y to y (y <- 4)
+... bind(maybe_x, lambda x:  # bind the value stored in maybe_x to x (x <- 2)
+... safe_div(x, y)           # x=2 and y=4 are passed to safe_div
+... )
+... )
+Just 0.5
+```
+
+With the magic function `bind`, we are now able to compose any number of `safe_div` together.
+
+More examples:
+
+```python
+>>> maybe_x = safe_div(4, 2) # Just 2
+>>> maybe_y = safe_div(4, 1) # Just 4
+>>> maybe_z = safe_div(1, 2) # Just 0.5
+>>> maybe_n = safe_div(1, 0) # Nothing
+Got exception: division by zero
+>>> bind(maybe_n, lambda n:  # bind the value stored in maybe_n to n
+... bind(maybe_y, lambda y:  # bind the value stored in maybe_y to y
+... safe_div(n, y)
+... )
+... )
+Nothing
+
+>>> bind(maybe_x, lambda x:                 # bind the value stored in maybe_x to x
+... bind(maybe_y, lambda y:                 # bind the value stored in maybe_y to y
+... bind(maybe_z, lambda z:                 # bind the value stored in maybe_z to z
+... bind(safe_div(y, x), lambda y_div_x:    # bind the value stored in the output of safe_div(y, x) to y_div_x
+... safe_div(y_div_x, z)
+... )
+... )
+... )
+... )
+Just 4.0
+```
+
+In all examples above, whenever a safe function, e.g. `safe_div`, need to access the raw value stored in a maybe object 
+as its input, we can create a lambda function, whose input is "bind" to the raw value, and pass the function along 
+with the Maybe object to `bind`, as a pattern looks roughly like this: `bind(maybe_x, lambda x: ...)`. 
+
+`bind` is what makes Maybe a monad. It brings composability to `safe_div`, and essentially any functions that takes 
+raw value as inputs and returns `Maybe` outputs.
+
+Now that we have a good understanding of monad, and saw its implementation in Python, let's look at how it is 
+implemented in Haskell.
+
+First, let's create a `Maybe` data type in Haskell.
+
+```haskell
+data Maybe a = Just a | Nothing deriving Show
+```
+
+In fact, `Maybe` is already implemented by Haskell's standard library and imported as a part of prelude.
+
+`Maybe` has two constructors, `Just` and `Nothing`. `Just` takes one value, which could be any type.
+`Nothing` does not have input argument.
+
+```haskell
+λ> Just 1
+Just 1
+λ> Just 2
+Just 2
+λ> Nothing
+Nothing
+```
+
+With `Maybe`, we can create a function that performs division and returns a `Maybe` type, and use `Nothing` to represent 
+the failed status of an operation.
+
+```haskell
+safeDiv Int :: Int -> Int -> Maybe Int
+safeDiv _ 0 = Nothing
+safeDiv x y = Just (x `div` y)
+```
+
+The implementation is a bit different from Python example. In Python, we use `try...except` to catch exceptions. 
+In Haskell, we directly check the value of divisor before dividing the numbers to avoid any exception.
+The purpose is to simplify the Haskell example so readers can focus more on the concept of Monad.
+
+Now, let's try a couple of examples.
+
+```haskell
+λ> safeDiv 4 2
+Just 2
+λ> safeDiv 4 1
+Just 4
+λ> safeDiv 4 0
+Nothing
+```
+
+If we pass `Maybe` types to `safeDiv`, Haskell will complain:
+
+```haskell
+λ> maybeX = safeDiv 4 2
+λ> maybeY = safeDiv 4 1
+λ> safeDiv maybeX maybeY
+
+<interactive>:14:9: error:
+    • Couldn't match expected type ‘Int’ with actual type ‘Maybe Int’
+    • In the first argument of ‘safeDiv’, namely ‘maybeX’
+      In the expression: safeDiv maybeX maybeY
+      In an equation for ‘it’: it = safeDiv maybeX maybeY
+
+<interactive>:14:16: error:
+    • Couldn't match expected type ‘Int’ with actual type ‘Maybe Int’
+    • In the second argument of ‘safeDiv’, namely ‘maybeY’
+      In the expression: safeDiv maybeX maybeY
+      In an equation for ‘it’: it = safeDiv maybeX maybeY
+```
+
+This is because `safeDiv` expects input type `Int`, but the actual input type `Maybe Int`. This is exactly the same 
+problem we encountered in Python example, except that the error is thrown because of mismatched types.
+
+We will use the same solution to solve this problem by introducing the `bind` function.
+
+Let's define Monad more rigidly as a type class.
+
+```haskell
+class Monad m where
+    (>>=)  :: m a -> (a -> m b) -> m b
+```
+
+Symbol "`(>>=)`" is called "bind" in haskell. It has the exactly same purpose as `bind` function in our previous 
+Python example.
+"`(>>=)`" takes two inputs. The first input is of type "`m a`", which will be matched to "Maybe Int" in the context of 
+our example. The second input is a function, whose type is `(a -> m b)`. In our case, it will be a lambda function.
+
+```haskell
+instance Monad Maybe where
+    Nothing  >>= f = Nothing
+    (Just x) >>= f = f x
+```
+
+The implementation is almost identical to the one we saw in Python. We check if the first object is "Nothing", 
+if so, we ignore the second argument, function `f`, and directly return "Nothing". Otherwise, we take the actual value 
+stored in the first input, and pass it to function `f` and return the result.
+
+Now, let's try to use "`(>>=)`".
+
+```haskell
+λ> maybeX = safeDiv 4 2
+λ> maybeY = safeDiv 4 1
+λ> maybe_x >>= (\x -> (maybe_y >>= (\y -> safeDiv y x)))
+Just 2
+```
+
+It seems to work! We are basically doing the same thing as we did in Python examples.
+Comparing the code side by side:
+
+|   |  |
+| --- | --- |
+| Python  | `bind(maybe_x, lambda x: bind(maybe_y, lambda y: safe_div(y, x)))` |
+| Haskell | `maybe_x >>= (\x -> (maybe_y >>= (\y -> safeDiv y x)))`            |
+|  |  |
+
+The haskell's expression could be written in multiple lines when wrapped in a function:
+
+```haskell
+doWork :: Maybe Int -> Maybe Int -> Maybe Int
+doWork maybeX maybeY = maybeX >>= \x ->
+                       maybeY >>= \y ->
+                       safeDiv x y
+```
+
+```haskell
+λ> maybeX = safeDiv 4 2
+λ> maybeY = safeDiv 4 1
+λ> doWork maybeY maybeX
+Just 2
+```
+
+Does it look familiar? Yes, it looks really close to our Python implementation except that function "`bind`" is 
+now replaced with the infix operator "`(>>=)`".
+
+Because binding is used quite often in Haskell, the language provides a syntax sugar to free us from 
+creating lambda functions and typing `(>>=)` over and over again. The syntax sugar starts with a Haskell keyword 
+"`do`" and followed by expressions of "`a <- Ma`":
+
+```haskell
+doWork :: Maybe Int -> Maybe Int -> Maybe Int
+doWork maybeX maybeY = do
+    x <- maybeX
+    y <- maybeY
+    safeDiv x y
+```
+
+```haskell
+λ> maybeX = safeDiv 4 2
+λ> maybeY = safeDiv 4 1
+λ> doWork maybeY maybeX
+Just 2
 ```
