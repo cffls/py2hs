@@ -131,9 +131,9 @@ bigger x y = if x > y
              else y
 ```
 
-##### Approach 2: set a type constraint `Int` for `a` 
+##### Approach 2: set a type constraint `Integral` for `a` 
 ```haskell
-bigger :: (Int a) => a -> a -> a 
+bigger :: (Integral a) => a -> a -> a 
 bigger x y = if x > y
              then x
              else y
