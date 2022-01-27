@@ -7,3 +7,27 @@ An interactive [Gomoku](https://en.wikipedia.org/wiki/Gomoku) game written in ha
 2. Change directory to `gomoku/gomoku-haskell` and setup stack: `stack setup`.
 3. Build gomoku-haskell: `stack build`.
 4. Start the game: `stack exec gomoku-haskell-exe`.
+
+### Game preview
+
+```
+===============================
+║ | | | | | | | | | | | | | | ║
+║ | | | | | | | | | | | | | | ║
+║ | | | | | | | | | | | | | | ║
+║ | | | | | | | | | | | | | | ║
+║ | | | | | | | | | | | | | | ║
+║ | | | | | | | | | | | | | | ║
+║ | | | | | | | | | | | | | | ║
+║ | | | | | | |.| | | | | | | ║
+║ | | | | | | | | | | | | | | ║
+║ | | | | | | | | | | | | | | ║
+║ | | | | | | | | | | | | | | ║
+║ | | | | | | | | | | | | | | ║
+║ | | | | | | | | | | | | | | ║
+║ | | | | | | | | | | | | | | ║
+║ | | | | | | | | | | | | | | ║
+===============================
+
+Turn: PlayerA
+```
